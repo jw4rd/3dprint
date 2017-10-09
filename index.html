@@ -453,14 +453,19 @@ $("body").on('mousewheel',function(e){
 function exportStl(){
 
 	makeStl=true
-
 	updateAll()
-	scale(2.54)
+	scale(1)
+	setTimeout("getScene()", 100)
 
+	
 
+}
 
+function reset(){
 
-	setTimeout("getScene()", 1000)
+	makeStl=false
+	scale(sf)
+
 
 }
 
@@ -472,17 +477,14 @@ function getScene(){
 	console.log(stlA.buffer)
 	_arrayBufferToBase64(stlA.buffer)
 
+	reset()
+
 }
 
 function _arrayBufferToBase64(buffer){
 
-
-	
-
-	//scale(1)
 	r=0
 	render()
-	//console.log(buffer)
 	var binary = ''
 	var bytes = new Uint8Array(buffer)
 	var len = bytes.byteLength
@@ -499,8 +501,6 @@ function _arrayBufferToBase64(buffer){
 	link.setAttribute("download", "print.stl")
 	link.click()
 
-	//scale(sf)
-	//updateAll()
 
 }
 
