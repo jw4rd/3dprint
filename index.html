@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta charset=utf-8>
+<title>3D PRINT</title>
+<style>
+
+body{
+	overflow:hidden;
+	margin: 0;
+	font-family:arial; 
+}
+
+#notes{
+	font-size:12px;  
+}
+
+input{
+	width:50px;
+}
+
+a{
+	color:#0000ff;
+	text-decoration:none;
+}
+
+a:hover{
+	color:#0000aa;
+	text-decoration:underline;
+}
+
+
+#parameters{
+	position:absolute;
+}
+
+input[type="checkbox"] {
+	transform:scale(1, 1);
+}
+
+.button{
+	width:83px;
+	height:40px;
+}
+
+#myCanvas{
+	position:absolute;
+	top:2px;
+	left:2px;
+	/*border-radius:10px;*/
+	/*border: solid 2px #777;*/
+}
+
+#makeDiv{
+	position:absolute;
+	top:10px;
+	right:10px;
+}
+
+#make{
+	position:absolute;
+	bottom:0px;
+	right:10px;
+}
+
+#explode{
+	height:40px;
+}
+
+
+#code{
+
+}
+
+</style>
+
+
+</head>
+
+<body onResize="redraw()">
+
+<!--
+	onResize="window.location=window.location;"
+-->
+
+<script src="js/libs/jquery-3.1.1.min.js"></script>
+<script src="js/libs/jquery.mousewheel.min.js"></script>
+<script src="js/libs/three.js"></script>
+<script src="js/libs/STLBinaryExporter.js"></script>
+<script src="js/libs/ThreeCSG.js"></script>
+
+<canvas id="myCanvas"></canvas>
+
+
+<div id="parameters" style="top:10px;left:10px">
+
+<br>
+
+sphere radius<br>
+<input id='radius' type="number" value="6" step="0.05" autocomplete="on"/><br>
+
+</div>
+
+<div id='makeDiv'>
+
+
+
+<select id="output" autocomplete="on">
+	<option value="stl" selected>stl</option>
+</select><p>
+
+</div>
+
+<div id='make'>
+	<a href="#" id="downloadLink"></a>
+	<input class="button" type="submit" value="make" style="height:80px;" onclick="exportStl()"/><p>
+</div>
+
+<script>
+
+
+//TODO
+//
+
+
+var scene = new THREE.Scene() 
+ 
+var renderer = new THREE.WebGLRenderer() 
+renderer.setSize( window.innerWidth, window.innerHeight ) 
+document.body.appendChild( renderer.domElement )
+
+var camera = new THREE.OrthographicCamera( window.innerWidth / -2, window.innerWidth / 2, window.innerHeight / 2, window.innerHeight / - 2, -1000, 5000 )
+ 
+camera.position.y = 200
+camera.position.z =0
+camera.rotation.x = Math.PI/4
+
+renderer.setClearColor(0xffffff, 1)
+
+
+function redraw(){
+
+	renderer.setSize( window.innerWidth, window.innerHeight ) 
+	document.body.appendChild( renderer.domElement )
+	
+
+}
+
+var extrudeSettings = {
+steps: 1,
+amount: 50,
+bevelEnabled: false,
+material: 0,
+extrudeMaterial: 1
+};
+
+var material1 =new THREE.MeshBasicMaterial( {
+transparent: false,
+opacity: 0.5,
+color: 0xffffff, 
+polygonOffset: true, 
+polygonOffsetFactor: 1 
+})
+
+var material2 = new THREE.MeshPhongMaterial( {
+transparent: true,
+opacity: 0.9,
+color: 0xcc9966 
+})
+
+var material3 =new THREE.MeshBasicMaterial( {
+transparent: true,
+opacity: 0.4,
+color: 0xcc9966, 
+polygonOffset: true, 
+polygonOffsetFactor: 1 
+})
+
+var lineMaterial = new THREE.LineBasicMaterial( { 
+color: 0x000000, 
+linewidth: 1 
+} )
+
+var lineMaterial2 = new THREE.LineBasicMaterial( { 
+color: 0xdddddd, 
+linewidth: 1 
+} )
+
+
+var lineMaterial3 = new THREE.LineBasicMaterial( {
+transparent: true,
+opacity: 0.3, 
+color: 0xff0000, 
+linewidth: 1 
+} )
+
+var lineMaterial4 = new THREE.LineBasicMaterial( {
+transparent: true,
+opacity: 0.5, 
+color: 0x00ff00, 
+linewidth: 1 
+} )
+
+
+var lineMaterial5 = new THREE.LineBasicMaterial( {
+transparent: true,
+opacity: 0.4, 
+color: 0xff00ff, 
+linewidth: 1 
+} )
+
+
+var r = 0
+var sf = 20
+var dir = true
+
+var radius = 6
+
+//
+makeStl=false
+
+
+function render() { 
+
+	requestAnimationFrame(render)
+
+	r-=0.003
+	if(Math.abs(r)>=2*Math.PI){
+		r=0
+	}
+
+	if(makeStl==false){
+
+		for(i=0;i<scene.children.length;i++){
+			if(scene.children[i].type!="Light"){
+				scene.children[i].rotation.z=r
+			}
+		}
+	}
+	else{
+		for(i=0;i<scene.children.length;i++){
+			if(scene.children[i].type!="Light"){
+				scene.children[i].rotation.z=0
+			}
+		}
+
+
+	}
+
+	renderer.render(scene, camera)
+ 
+} 
+
+
+
+function rotateX(o,a){
+	o.geometry.applyMatrix(new THREE.Matrix4().makeRotationX(a))
+}
+function rotateY(o,a){
+	o.geometry.applyMatrix(new THREE.Matrix4().makeRotationY(a))
+}
+function rotateZ(o,a){
+	o.geometry.applyMatrix(new THREE.Matrix4().makeRotationZ(a))
+}
+
+function translate(o,x,y,z){
+	o.geometry.applyMatrix( new THREE.Matrix4().makeTranslation( x,y,z) )
+}
+
+
+function updateAll(){
+
+	while (scene.children.length > 0) {
+		scene.remove(scene.children[scene.children.length - 1])
+	}
+
+
+	pts = new THREE.Geometry()
+
+	//grid 48 x 48 x 1"
+	l=48/2*10
+	w=48/2*10
+
+	for(i=0;i<48;i++){
+		if(i%2==0){
+			pts.vertices.push(new THREE.Vector3(-w, -l, 0))
+			pts.vertices.push(new THREE.Vector3(-w, l, 0))
+		}
+		else{
+			pts.vertices.push(new THREE.Vector3(-w, l, 0))
+			pts.vertices.push(new THREE.Vector3(-w, -l, 0))
+		}
+		w-=10
+	}
+
+	for(i=0;i<48;i++){
+		if(i%2==0){
+			pts.vertices.push(new THREE.Vector3(-w, -l, 0))
+			pts.vertices.push(new THREE.Vector3(w, -l, 0))
+		}
+		else{
+			pts.vertices.push(new THREE.Vector3(w, -l, 0))
+			pts.vertices.push(new THREE.Vector3(-w, -l, 0))
+		
+		}
+		l-=10
+	}
+
+		pts.vertices.push(new THREE.Vector3(-w, -l, 0))
+		pts.vertices.push(new THREE.Vector3(w, -l, 0))
+
+
+		pts.vertices.push(new THREE.Vector3(-w, -l, 0))
+		pts.vertices.push(new THREE.Vector3(-w, l, 0))
+	
+
+	outline = new THREE.Line(pts, lineMaterial2)
+	scene.add(outline)
+
+
+	pts2 = new THREE.Geometry()
+	pts2.vertices.push(new THREE.Vector3(240,0,0))
+	pts2.vertices.push(new THREE.Vector3(-240,0,0))
+	xAxis = new THREE.Line(pts2, lineMaterial3)
+	scene.add(xAxis)
+
+
+	pts3 = new THREE.Geometry()
+	pts3.vertices.push(new THREE.Vector3(0,240,0))
+	pts3.vertices.push(new THREE.Vector3(0,-240,0))
+	yAxis = new THREE.Line(pts3, lineMaterial4)
+	scene.add(yAxis)
+
+
+	pts4 = new THREE.Geometry()
+	pts4.vertices.push(new THREE.Vector3(0,0,0))
+	pts4.vertices.push(new THREE.Vector3(0,0,480))
+	zAxis = new THREE.Line(pts4, lineMaterial5)
+	scene.add(zAxis)
+
+	///////////////////////////////////////////////////////////////	
+	//CSG
+	
+	var materialNormal = new THREE.MeshNormalMaterial();
+
+	cube1 = new THREE.BoxGeometry(10, 10, 10);
+
+	cubeMesh = new THREE.Mesh( cube1 );
+
+	geometry = new THREE.EdgesGeometry(cube1)
+	cubeWireframe = new THREE.LineSegments(geometry,lineMaterial)
+	//scene.add(cubeWireframe)
+	
+	translate(cubeMesh,5,5,5)
+	translate(cubeWireframe,51,51,51)
+
+	sphere1 = new THREE.SphereGeometry( radius, 32, 32 );
+
+	sphereMesh = new THREE.Mesh( sphere1 );
+
+	translate(sphereMesh,5,5,5)
+
+	geometry = new THREE.EdgesGeometry(sphere1)
+	sphereWireframe = new THREE.LineSegments(geometry,lineMaterial)
+	//scene.add(sphereWireframe)
+
+
+	var cubeBSP = new ThreeBSP( cubeMesh );
+	var sphereBSP = new ThreeBSP( sphereMesh );
+
+	var newBSP = cubeBSP.subtract( sphereBSP );
+
+	var geo = newBSP.toGeometry();
+
+	var newMesh = newBSP.toMesh( material2 );
+
+	geo2 = new THREE.EdgesGeometry(geo,160)
+	var newWireframe = new THREE.LineSegments(geo2,lineMaterial)
+
+	newWireframe.position.set(0,1,0);
+
+	translate(newMesh,-5,-5,0)
+	scene.add( newMesh );
+	//scene.add( newWireframe );
+
+	var light1 = new THREE.PointLight(0xffffff,1,100000)
+	var light2 = new THREE.PointLight(0xffffff,0.8,100000)
+	var light3 = new THREE.PointLight(0xffffff,0.9,100000)
+
+	light2.position.x = 1000
+	light2.position.y = -1000
+	light2.position.z = 0
+
+	scene.add(light2)
+
+	light1.position.x = -1000
+	light1.position.y = -1000
+	light1.position.z = 0
+
+	scene.add(light1)
+
+	light3.position.x = 0
+	light3.position.y = 0
+	light3.position.z = 10000
+
+	scene.add(light3)
+
+	if(makeStl==false){
+		scale(sf)
+	}
+
+///////////////////////////////////////////////////
+
+
+}
+
+render()
+
+
+function scale(s){
+
+	for(i=0;i<scene.children.length;i++){
+
+		if(scene.children[i].type!="Sprite"){
+
+			scene.children[i].scale.set(s,s,s)
+
+		}
+
+	}
+
+}
+
+
+
+updateAll()
+
+
+$("body").on('mousewheel',function(e){
+	
+	sf+=(e.deltaY/10)
+
+	if(sf<0.1){
+		sf=0.1
+	}
+	scale(sf)
+
+})
+
+
+
+function exportStl(){
+
+	makeStl=true
+
+	updateAll()
+	scale(2.54)
+
+
+
+
+	setTimeout("getScene()", 1000)
+
+}
+
+
+function getScene(){
+
+	stl = new THREE.STLBinaryExporter()
+	stlA = stl.parse(scene)
+	console.log(stlA.buffer)
+	_arrayBufferToBase64(stlA.buffer)
+
+}
+
+function _arrayBufferToBase64(buffer){
+
+
+	
+
+	//scale(1)
+	r=0
+	render()
+	//console.log(buffer)
+	var binary = ''
+	var bytes = new Uint8Array(buffer)
+	var len = bytes.byteLength
+
+	console.log(len)	
+
+	for(i=0;i<len;i++){
+		binary += String.fromCharCode(bytes[i])
+	}
+
+	var link = document.getElementById("downloadLink")
+
+	link.setAttribute("href", "data:text/plain;base64," + btoa(binary))
+	link.setAttribute("download", "print.stl")
+	link.click()
+
+	//scale(sf)
+	//updateAll()
+
+}
+
+$("#radius").on('change click',function(){
+	radius = parseFloat($(this).val())
+	updateAll()
+})
+
+		</script>
+	</body>	
+</html>
